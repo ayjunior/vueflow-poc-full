@@ -4,6 +4,7 @@ import { Controls } from '@vue-flow/controls'
 import { MiniMap } from '@vue-flow/minimap'
 import OrgNode from './OrgNode.vue'
 import PrintPreview from './PrintPreview.vue'
+import LayoutHistoryPanel from './LayoutHistoryPanel.vue'
 
 // Estrutura organizacional do IMAP (Lei 7.671/1991 · Decreto 423/2026).
 // Posições (x = canto superior-esquerdo, y, width) replicam o layout do
@@ -44,6 +45,8 @@ const NODES_DATA = [
   { id: 'nucleo_pesquisa', label: 'Núcleo de Pesquisa', parentId: 'coord_tec_planejamento', kind: 'nucleo', x: 1820, y: 700, width: 170 },
 ]
 
+const HISTORY_KEY = 'imap-orgchart-flow-history'
+
 const EDGE_STYLE = { stroke: '#33475b', strokeWidth: 1.4 }
 const CONSULTIVO_STYLE = { ...EDGE_STYLE, strokeDasharray: '4 4' }
 
@@ -71,22 +74,71 @@ const ORG_EDGES = NODES_DATA.filter((n) => n.parentId).map((n) => {
 
 export default {
   name: 'OrgChart',
-  components: { VueFlow, Controls, MiniMap, Panel, OrgNode, PrintPreview },
+  components: { VueFlow, Controls, MiniMap, Panel, OrgNode, PrintPreview, LayoutHistoryPanel },
   data() {
     return {
       nodes: ORG_NODES,
       edges: ORG_EDGES,
       printPreviewOpen: false,
+      layoutStatus: '',
+      layoutHistory: [],
+      historyPanelOpen: false,
     }
   },
   setup() {
-    const { onPaneReady, fitView } = useVueFlow()
-    return { onPaneReadyFn: onPaneReady, fitViewFn: fitView }
+    // Composables da Vue Flow: precisam rodar dentro de setup(), por isso são
+    // expostos ao restante do componente (Options API) via `this`.
+    const { onPaneReady, fitView, toObject, fromObject } = useVueFlow()
+    return {
+      onPaneReadyFn: onPaneReady,
+      fitViewFn: fitView,
+      toObjectFn: toObject,
+      fromObjectFn: fromObject,
+    }
   },
   mounted() {
     this.onPaneReadyFn(() => {
       this.fitViewFn({ padding: 0.08 })
     })
+    this.loadHistory()
+  },
+  methods: {
+    loadHistory() {
+      const raw = localStorage.getItem(HISTORY_KEY)
+      this.layoutHistory = raw ? JSON.parse(raw) : []
+    },
+    persistHistory() {
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(this.layoutHistory))
+    },
+    saveLayout() {
+      const defaultName = `Layout ${new Date().toLocaleString('pt-BR')}`
+      const name = window.prompt('Nome para este layout:', defaultName)
+      if (!name) return
+
+      this.layoutHistory.unshift({
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        name,
+        savedAt: new Date().toISOString(),
+        data: this.toObjectFn(),
+      })
+      this.persistHistory()
+      this.layoutStatus = 'Layout salvo no histórico.'
+    },
+    openHistory() {
+      this.loadHistory()
+      this.historyPanelOpen = true
+    },
+    async restoreFromHistory(id) {
+      const entry = this.layoutHistory.find((e) => e.id === id)
+      if (!entry) return
+      await this.fromObjectFn(entry.data)
+      this.historyPanelOpen = false
+      this.layoutStatus = `Layout "${entry.name}" restaurado.`
+    },
+    deleteFromHistory(id) {
+      this.layoutHistory = this.layoutHistory.filter((e) => e.id !== id)
+      this.persistHistory()
+    },
   },
 }
 </script>
@@ -99,9 +151,18 @@ export default {
         <span>Prefeitura de Curitiba</span>
       </div>
       <h2>INSTITUTO MUNICIPAL DE ADMINISTRAÇÃO PÚBLICA - IMAP</h2>
-      <button type="button" class="org-chart-print-btn" @click="printPreviewOpen = true">
-        🖶 Visualizar impressão
-      </button>
+      <div class="org-chart-header__actions">
+        <span v-if="layoutStatus" class="org-chart-status">{{ layoutStatus }}</span>
+        <button type="button" class="org-chart-print-btn" @click="saveLayout">
+          💾 Salvar layout
+        </button>
+        <button type="button" class="org-chart-print-btn" @click="openHistory">
+          🕒 Histórico ({{ layoutHistory.length }})
+        </button>
+        <button type="button" class="org-chart-print-btn" @click="printPreviewOpen = true">
+          🖶 Visualizar impressão
+        </button>
+      </div>
     </header>
 
     <div class="flow-wrapper">
@@ -136,6 +197,13 @@ export default {
         <PrintPreview v-model="printPreviewOpen" background-color="#dbe6f5" />
       </VueFlow>
     </div>
+
+    <LayoutHistoryPanel
+      v-model="historyPanelOpen"
+      :entries="layoutHistory"
+      @restore="restoreFromHistory"
+      @delete="deleteFromHistory"
+    />
 
     <footer class="org-chart-footer">
       <span>Legislação de estrutura: Lei 7.671/1991 – Último Decreto Altera: 423/2026</span>
