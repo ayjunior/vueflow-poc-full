@@ -476,6 +476,7 @@ button {
 
 .org-node {
   width: 100%;
+  height: 100%;
   padding: 8px 10px;
   border-radius: 3px;
   border: 1px solid #1a1a1a;
@@ -484,6 +485,18 @@ button {
   font-size: 11px;
   line-height: 1.3;
   text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.org-resizer-line {
+  border-color: #16406e !important;
+}
+
+.org-resizer-handle {
+  background: #16406e !important;
+  border: 1px solid #ffffff !important;
 }
 
 .org-node--root {
@@ -539,6 +552,14 @@ button {
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+.org-legend__hint {
+  margin: 6px 0 0;
+  padding-top: 6px;
+  border-top: 1px solid #cbd8ea;
+  font-size: 10px;
+  color: #33475b;
 }
 
 .org-legend li {

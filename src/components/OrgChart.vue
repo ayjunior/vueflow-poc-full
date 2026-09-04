@@ -192,6 +192,7 @@ export default {
             <li><span class="dot dot--staff"></span> Assessoria / Staff</li>
             <li><span class="dot dot--consultivo"></span> Órgão consultivo</li>
           </ul>
+          <p class="org-legend__hint">Selecione um nó para redimensioná-lo pelas alças.</p>
         </Panel>
 
         <PrintPreview v-model="printPreviewOpen" background-color="#dbe6f5" />
