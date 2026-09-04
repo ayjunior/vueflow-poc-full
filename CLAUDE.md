@@ -13,13 +13,13 @@ Comentários no código-fonte e textos da interface estão em português (pt-BR)
 
 ## Comandos
 
-O gerenciador de pacotes é o pnpm (`pnpm-lock.yaml` / `pnpm-workspace.yaml` são o lockfile de referência; `package-lock.json` também existe, então `npm install`/`npm run dev` puros também funcionam).
+O gerenciador de pacotes é o npm (`package-lock.json` é o lockfile de referência; `pnpm-lock.yaml`/`pnpm-workspace.yaml` também existem no repositório, então `pnpm install`/`pnpm dev` também funcionam).
 
 ```bash
-pnpm install
-pnpm dev       # servidor de desenvolvimento do vite na porta 5173 (ver vite.config.js)
-pnpm build     # build de produção em dist/
-pnpm preview   # serve o build de produção localmente
+npm install
+npm run dev       # servidor de desenvolvimento do vite na porta 5173 (ver vite.config.js)
+npm run build     # build de produção em dist/
+npm run preview   # serve o build de produção localmente
 ```
 
 Não há suíte de testes, linter ou type checker configurados neste repositório.
