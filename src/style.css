@@ -499,6 +499,25 @@ button {
   border: 1px solid #ffffff !important;
 }
 
+.helper-line {
+  position: absolute;
+  z-index: 5;
+  pointer-events: none;
+  background: #ff3d71;
+}
+
+.helper-line--horizontal {
+  left: -10000px;
+  width: 20000px;
+  height: 1px;
+}
+
+.helper-line--vertical {
+  top: -10000px;
+  height: 20000px;
+  width: 1px;
+}
+
 .org-node--root {
   border-width: 2px;
   font-weight: 700;

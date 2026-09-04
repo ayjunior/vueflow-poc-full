@@ -6,6 +6,7 @@ import { MiniMap } from '@vue-flow/minimap'
 import CustomNode from './CustomNode.vue'
 import ResizableNode from './ResizableNode.vue'
 import CustomEdge from './CustomEdge.vue'
+import { getHelperLines } from '../utils/helperLines'
 
 let dndCounter = 100
 
@@ -43,6 +44,8 @@ export default {
         { id: 'e3-5', source: '3', target: '5', markerEnd: MarkerType.ArrowClosed },
       ],
       lastEvent: 'Nenhum evento ainda — interaja com o canvas',
+      helperLineHorizontal: undefined,
+      helperLineVertical: undefined,
     }
   },
   setup() {
@@ -57,6 +60,10 @@ export default {
       onPaneReady,
       vueFlowRef,
       fitView,
+      onNodeDrag,
+      onNodeDragStop,
+      updateNode,
+      getNodes,
     } = useVueFlow()
 
     return {
@@ -68,6 +75,10 @@ export default {
       onPaneReadyFn: onPaneReady,
       vueFlowRef,
       fitViewFn: fitView,
+      onNodeDragFn: onNodeDrag,
+      onNodeDragStopFn: onNodeDragStop,
+      updateNodeFn: updateNode,
+      getNodesFn: getNodes,
     }
   },
   mounted() {
@@ -85,6 +96,27 @@ export default {
     // Evento: canvas pronto -> centraliza a view
     this.onPaneReadyFn(() => {
       this.fitViewFn({ padding: 0.2 })
+    })
+
+    // Alinhamento estilo Figma: ao arrastar, encaixa o nó nas bordas/centro
+    // dos demais e mostra linhas-guia enquanto o encaixe estiver ativo.
+    this.onNodeDragFn(({ node }) => {
+      const result = getHelperLines(node, this.getNodesFn, 8)
+      this.helperLineHorizontal = result.horizontal
+      this.helperLineVertical = result.vertical
+
+      if (result.snapPosition.x !== undefined || result.snapPosition.y !== undefined) {
+        this.updateNodeFn(node.id, {
+          position: {
+            x: result.snapPosition.x ?? node.position.x,
+            y: result.snapPosition.y ?? node.position.y,
+          },
+        })
+      }
+    })
+    this.onNodeDragStopFn(() => {
+      this.helperLineHorizontal = undefined
+      this.helperLineVertical = undefined
     })
   },
   methods: {
@@ -152,6 +184,19 @@ export default {
       <!-- edge customizada (label + botão de remover) -->
       <template #edge-custom="props">
         <CustomEdge v-bind="props" />
+      </template>
+
+      <template #zoom-pane>
+        <div
+          v-if="helperLineHorizontal !== undefined"
+          class="helper-line helper-line--horizontal"
+          :style="{ top: `${helperLineHorizontal}px` }"
+        />
+        <div
+          v-if="helperLineVertical !== undefined"
+          class="helper-line helper-line--vertical"
+          :style="{ left: `${helperLineVertical}px` }"
+        />
       </template>
 
       <Background pattern-color="#2a3342" :gap="18" />

@@ -5,6 +5,7 @@ import { MiniMap } from '@vue-flow/minimap'
 import OrgNode from './OrgNode.vue'
 import PrintPreview from './PrintPreview.vue'
 import LayoutHistoryPanel from './LayoutHistoryPanel.vue'
+import { getHelperLines } from '../utils/helperLines'
 
 // Estrutura organizacional do IMAP (Lei 7.671/1991 · Decreto 423/2026).
 // Posições (x = canto superior-esquerdo, y, width) replicam o layout do
@@ -83,17 +84,24 @@ export default {
       layoutStatus: '',
       layoutHistory: [],
       historyPanelOpen: false,
+      helperLineHorizontal: undefined,
+      helperLineVertical: undefined,
     }
   },
   setup() {
     // Composables da Vue Flow: precisam rodar dentro de setup(), por isso são
     // expostos ao restante do componente (Options API) via `this`.
-    const { onPaneReady, fitView, toObject, fromObject } = useVueFlow()
+    const { onPaneReady, fitView, toObject, fromObject, onNodeDrag, onNodeDragStop, updateNode, getNodes } =
+      useVueFlow()
     return {
       onPaneReadyFn: onPaneReady,
       fitViewFn: fitView,
       toObjectFn: toObject,
       fromObjectFn: fromObject,
+      onNodeDragFn: onNodeDrag,
+      onNodeDragStopFn: onNodeDragStop,
+      updateNodeFn: updateNode,
+      getNodesFn: getNodes,
     }
   },
   mounted() {
@@ -101,6 +109,27 @@ export default {
       this.fitViewFn({ padding: 0.08 })
     })
     this.loadHistory()
+
+    // Alinhamento estilo Figma: ao arrastar, encaixa o nó nas bordas/centro
+    // dos demais e mostra linhas-guia enquanto o encaixe estiver ativo.
+    this.onNodeDragFn(({ node }) => {
+      const result = getHelperLines(node, this.getNodesFn, 8)
+      this.helperLineHorizontal = result.horizontal
+      this.helperLineVertical = result.vertical
+
+      if (result.snapPosition.x !== undefined || result.snapPosition.y !== undefined) {
+        this.updateNodeFn(node.id, {
+          position: {
+            x: result.snapPosition.x ?? node.position.x,
+            y: result.snapPosition.y ?? node.position.y,
+          },
+        })
+      }
+    })
+    this.onNodeDragStopFn(() => {
+      this.helperLineHorizontal = undefined
+      this.helperLineVertical = undefined
+    })
   },
   methods: {
     loadHistory() {
@@ -178,6 +207,19 @@ export default {
       >
         <template #node-org="props">
           <OrgNode v-bind="props" />
+        </template>
+
+        <template #zoom-pane>
+          <div
+            v-if="helperLineHorizontal !== undefined"
+            class="helper-line helper-line--horizontal"
+            :style="{ top: `${helperLineHorizontal}px` }"
+          />
+          <div
+            v-if="helperLineVertical !== undefined"
+            class="helper-line helper-line--vertical"
+            :style="{ left: `${helperLineVertical}px` }"
+          />
         </template>
 
         <MiniMap pannable zoomable />
